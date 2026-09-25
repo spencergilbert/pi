@@ -145,4 +145,25 @@ describe("Anthropic empty thinking signature compat", () => {
 		const assistant = payload.messages?.find((message) => message.role === "assistant");
 		expect(assistant?.content).toEqual([{ type: "thinking", thinking: "internal reasoning", signature: "" }]);
 	});
+
+	// OpenCode Zen and Zen Go return thinking blocks with an empty signature for qwen3.8-flash.
+	// minimax-m3 returns real signatures and the Claude models are Anthropic pass-throughs, so
+	// only qwen3.8-flash is opted in.
+	it.each(["opencode", "opencode-go"] as const)(
+		"allows empty signatures only for OpenCode %s qwen3.8-flash",
+		(provider) => {
+			const affected = getModel(provider, "qwen3.8-flash");
+			expect(affected.api).toBe("anthropic-messages");
+			expect(affected.compat?.allowEmptySignature).toBe(true);
+
+			const untouched = getModels(provider).filter(
+				(model): model is Model<"anthropic-messages"> =>
+					model.api === "anthropic-messages" && model.id !== "qwen3.8-flash",
+			);
+			expect(untouched.length).toBeGreaterThan(0);
+			for (const model of untouched) {
+				expect(model.compat?.allowEmptySignature, model.id).not.toBe(true);
+			}
+		},
+	);
 });

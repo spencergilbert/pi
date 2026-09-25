@@ -269,6 +269,11 @@ const EAGER_TOOL_INPUT_STREAMING_UNSUPPORTED_ANTHROPIC_MODELS = new Set([
 	"github-copilot:claude-sonnet-4",
 	"github-copilot:claude-sonnet-4.5",
 ]);
+// OpenCode Zen and Zen Go serve Qwen3.8 Flash over their Anthropic-compatible endpoint with
+// unsigned thinking blocks (empty signature) that the endpoint also accepts on replay.
+// Other models on these providers are not affected: Zen Go's minimax-m3 emits real signatures
+// when thinking is requested, and the Claude models are native Anthropic pass-throughs.
+const ANTHROPIC_EMPTY_SIGNATURE_MODELS = new Set(["opencode:qwen3.8-flash", "opencode-go:qwen3.8-flash"]);
 const ANTHROPIC_ALLOWED_FALLBACK_MODELS = {
 	"claude-fable-5": ["claude-opus-4-8", "claude-opus-5"],
 	"claude-opus-5": ["claude-opus-4-8"],
@@ -1210,6 +1215,9 @@ function getAnthropicMessagesCompat(provider: string, modelId: string): Anthropi
 		compat.supportsEagerToolInputStreaming = false;
 	}
 	if (provider === "xiaomi" || provider.startsWith("xiaomi-token-plan-")) {
+		compat.allowEmptySignature = true;
+	}
+	if (ANTHROPIC_EMPTY_SIGNATURE_MODELS.has(`${provider}:${modelId}`)) {
 		compat.allowEmptySignature = true;
 	}
 	return Object.keys(compat).length > 0 ? compat : undefined;
